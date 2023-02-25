@@ -8,8 +8,10 @@
  <properties>
     <scala.binary.version>2.12</scala.binary.version>
     <scala.version>2.12.16</scala.version>
-    <spark.version>3.2.1</spark.version>
-    <jetty.version>9.3.30.v20211001</jetty.version>
+    <spark.version>3.3.1</spark.version>
+    <jetty.version>9.4.48.v20220622</jetty.version>
+     <!-- Package to use when relocating shaded classes. -->
+     <spark.shade.packageName>org.sparkproject</spark.shade.packageName>
   </properties>
 
  <repositories>
@@ -90,6 +92,37 @@
           </classpathContainers>
         </configuration>
       </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <configuration>
+                <shadedArtifactAttached>false</shadedArtifactAttached>
+                <artifactSet>
+                    <includes>
+                        <include>org.spark-project.spark:unused</include>
+                    </includes>
+                </artifactSet>
+                <relocations>
+                    <relocation>
+                        <pattern>org.eclipse.jetty</pattern>
+                        <shadedPattern>${spark.shade.packageName}.jetty</shadedPattern>
+                        <includes>
+                            <include>org.eclipse.jetty.**</include>
+                        </includes>
+                    </relocation>
+                </relocations>
+            </configuration>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+
+
     </plugins>  
      <resources>
       <resource>
@@ -127,13 +160,75 @@
       <scope>provided</scope>
     </dependency>
 
-   
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-      <version>${jetty.version}</version>
-    </dependency>
 
-  </dependencies>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-http</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-continuation</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-servlet</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-servlets</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-proxy</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-client</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-util</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-security</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-plus</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-server</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+     <dependency>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>jetty-webapp</artifactId>
+         <version>${jetty.version}</version>
+         <scope>provided</scope>
+     </dependency>
+
+
+ </dependencies>
 
 </project>

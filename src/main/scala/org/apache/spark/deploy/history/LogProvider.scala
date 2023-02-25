@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.ui.exec
+package org.apache.spark.deploy.history
 
 import java.io.{File, FileNotFoundException, IOException, BufferedReader,InputStream, FileInputStream}
 import java.lang.{Long => JLong}
@@ -57,7 +57,7 @@ import java.util.zip.{GZIPInputStream, ZipInputStream}
 	
 */
 
-private[ui] class LogProvider(conf: SparkConf) extends Logging {
+private[history] class LogProvider(conf: SparkConf) extends Logging {
 	
   private val supportedLogTypes = Set("stderr", "stdout")
   private val defaultBytes = 100 * 1024
@@ -66,7 +66,7 @@ private[ui] class LogProvider(conf: SparkConf) extends Logging {
   logInfo("spark.logs.home.dir="+sparkLogsHome);
   
   private val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
-  private[ui] val fs: FileSystem = new Path(sparkLogsHome).getFileSystem(hadoopConf)
+  private[history] val fs: FileSystem = new Path(sparkLogsHome).getFileSystem(hadoopConf)
    
 
    		
@@ -128,7 +128,7 @@ private[ui] class LogProvider(conf: SparkConf) extends Logging {
  * Companion object to [[org.apache.spark.util.logging.RollingFileAppender]]. Defines
  * names of configurations that configure rolling file appenders.
  */
-private[exec] object RollingFileReader  extends Logging{
+private[history] object RollingFileReader  extends Logging{
   val DEFAULT_BUFFER_SIZE = 8192
 
   val GZIP_LOG_SUFFIX = ".gz"
