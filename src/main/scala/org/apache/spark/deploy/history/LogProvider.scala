@@ -72,25 +72,28 @@ private[history] class LogProvider(conf: SparkConf) extends Logging {
    		
     def getLog(
       logDirectory: String,
-      logType: String,
+      //logType: String,
+      appName : String,
+      podId : String,
       offsetOption: Option[Long],
       byteLength: Int
     ): (String, Long, Long, Long) = {
 
-    if (!supportedLogTypes.contains(logType)) {
-      return ("Error: Log type must be one of " + supportedLogTypes.mkString(", "), 0, 0, 0)
-    }
+ //   if (!supportedLogTypes.contains(logType)) {
+  //    return ("Error: Log type must be one of " + supportedLogTypes.mkString(", "), 0, 0, 0)
+   // }
     
     val logDirPath:Path=new Path(logDirectory)
     if (!fs.getFileStatus(logDirPath).isDirectory) {
       return ("Error: invalid log directory " + logDirectory, 0, 0, 0)
     }
     try{
-	    logInfo("Reading log file : "+logDirectory+""+logType);
-	    val activeFilePath=new Path(logDirectory,logType);
+	    logDebug("Reading log file : "+logDirectory+""+appName+"*");
+	    //val activeFilePath=new Path(logDirectory,logType);
 	    
-	     val files = RollingFileReader.getSortedRolledOverFiles(fs, logDirectory, activeFilePath)
-	     logDebug(s"Sorted log files of type $logType in $logDirectory:\n${files.mkString("\n")}")
+	    
+	     val files = RollingFileReader.getSortedRolledOverFiles(fs, logDirectory, appName, podId)
+	     logDebug(s"Sorted log files in $logDirectory:\n${files.mkString("\n")}")
 	     val fileLengths: Seq[Long] = files.map(RollingFileReader.getFileLength(fs, _, logDirectory))
 	     
 	      val totalLength = fileLengths.sum
@@ -111,7 +114,7 @@ private[history] class LogProvider(conf: SparkConf) extends Logging {
 	      (logText, startIndex, endIndex, totalLength)
     } catch {
       case e: Exception =>
-        logError(s"Error getting $logType logs from directory $logDirectory", e)
+        logError(s"Error getting logs from directory $logDirectory", e)
         ("Error getting logs due to exception: " + e.getMessage, 0, 0, 0)
     }
    
@@ -141,18 +144,21 @@ private[history] object RollingFileReader  extends Logging{
    * name has the latest logs. So it sorts all the rolled over logs (that are
    * prefixed with `activeFileName`) and appends the active file
    */
-  def getSortedRolledOverFiles(fs: FileSystem, directory: String, activeFilePath: Path): Seq[FileStatus] = {
+  def getSortedRolledOverFiles(fs: FileSystem, directory: String, appName : String, podId : String): Seq[FileStatus] = {
     val path=new Path(directory)
-     logInfo("Log Dir="+directory)
+     logDebug("Log Dir="+directory+" AppName="+appName+" podId="+podId)
     val rolledOverFiles = fs.listStatus(path).filter { fileStatus =>
       val fileName = fileStatus.getPath().getName()
-      logInfo(fileName)
-      fileName.startsWith(activeFilePath.getName()) && fileName != activeFilePath.getName()
+      logDebug(fileName)
+      //fileName.startsWith(activeFilePath.getName()) && fileName != activeFilePath.getName()
+      fileName.startsWith(appName) && fileName.contains("-"+podId+"_")
     }
  //   val activeFile = {
   //    if (fs.isFile(activeFilePath)) Some(fs.listStatus(activeFilePath)) else None
  //   }
-    rolledOverFiles.sortBy(_.getPath().getName().stripSuffix(GZIP_LOG_SUFFIX))++fs.listStatus(activeFilePath)
+    //rolledOverFiles.sortBy(_.getPath().getName().stripSuffix(GZIP_LOG_SUFFIX))++fs.listStatus(activeFilePath)
+    //TO-DO - handle rolled over files, current code may have incorrect sorting.
+    rolledOverFiles.sortBy(_.getPath().getName().stripSuffix(GZIP_LOG_SUFFIX))
   }
   
   private var compressedLogFileLengthCache: LoadingCache[String, java.lang.Long] = null

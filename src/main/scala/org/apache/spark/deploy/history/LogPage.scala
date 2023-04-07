@@ -26,25 +26,39 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
   def render(request: HttpServletRequest): Seq[Node] = {
     val appId = Option(request.getParameter("appId"))
     val executorId = Option(request.getParameter("executorId"))
+    val podId = Option(request.getParameter("podId"))
     val driverId = Option(request.getParameter("driverId"))
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
     val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
       .getOrElse(defaultBytes)
     
+    /**
      val (logDir, params, pageName) = (appId, executorId, driverId) match {
-      case (Some(a), Some(e), None) =>
-        (s"${workDir}/$a/$e/", s"appId=$a&executorId=$e", s"$a/$e")
+      case (Some(a), Some(p), None) =>
+        //(s"${workDir}/$a/$p/", s"appId=$a&executorId=$e", s"$a/$e")
+        (s"${workDir}/$a/", s"appId=$a", s"$a")
       case (None, None, Some(d)) =>
+        //(s"${workDir}/$d/", s"driverId=$d", d)
         (s"${workDir}/$d/", s"driverId=$d", d)
+      case _ =>
+        throw new Exception("Request must specify either application or driver identifiers")
+    }
+    */
+    
+     val (logDir, params, pageName) = (appId, podId) match {
+      case (Some(a), Some(p)) =>
+        //(s"${workDir}/$a/$p/", s"appId=$a&executorId=$e", s"$a/$e")
+        (s"${workDir}/$a/", s"appId=$a&podId=$p", s"$a/$p")
       case _ =>
         throw new Exception("Request must specify either application or driver identifiers")
     }
     
 
-    val (logText, startByte, endByte, logLength) = logProvider.getLog(logDir, logType, offset, byteLength)
-    val linkToHome = <p><a href="" id="home-link">Back to Applications</a></p>  
-    val linkToExecutors = <p><a href="" id="exec-link">Back to Executors</a></p>  
+    val (logText, startByte, endByte, logLength) = logProvider.getLog(logDir, appId.get, podId.get, offset, byteLength)
+    //val (logText, startByte, endByte, logLength) = logProvider.getLog(logDir, logType, offset, byteLength)
+    //val linkToHome = <p><a href="" id="home-link">Back to Applications</a></p>  
+   // val linkToExecutors = <p><a href="" id="exec-link">Back to Executors</a></p>  
     //<p><a href={worker.activeMasterWebUiUrl}>Back to Master</a></p>
     val curLogLength = endByte - startByte
     val range =
@@ -73,8 +87,6 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
 
     val content =
       <div>
-        {linkToHome}
-        {linkToExecutors}
         {range}
         <div class="log-content" style="height:80vh; overflow:auto; padding:5px;">
           <div>{moreButton}</div>
@@ -82,10 +94,6 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
           {alert}
           <div>{newButton}</div>
         </div>
-        <script>{Unparsed(jsOnload)}</script>
-         <script src={UIUtils.prependBaseUri(request, "/custom/custom.js")}></script>
-         <script>setHomeURI()</script>
-          <script>setExecutorURI()</script>
       </div>
 
     UIUtils.basicSparkPage(request, content, logType + " log page for " + pageName)
@@ -94,12 +102,14 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
  def renderLog(request: HttpServletRequest): String = {
     val appId = Option(request.getParameter("appId"))
     val executorId = Option(request.getParameter("executorId"))
+    val podId = Option(request.getParameter("podId"))
     val driverId = Option(request.getParameter("driverId"))
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
     val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
       .getOrElse(defaultBytes)
-
+	
+	/**
      val (logDir, params, pageName) = (appId, executorId, driverId) match {
       case (Some(a), Some(e), None) =>
         (s"${workDir}/$a/$e/", s"appId=$a&executorId=$e", s"$a/$e")
@@ -108,8 +118,17 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
       case _ =>
         throw new Exception("Request must specify either application or driver identifiers")
     }
+    */
+    
+      val (logDir, params, pageName) = (appId, podId) match {
+      case (Some(a), Some(p)) =>
+        //(s"${workDir}/$a/$p/", s"appId=$a&executorId=$e", s"$a/$e")
+        (s"${workDir}/$a/", s"appId=$a&podId=$p", s"$a/$p")
+      case _ =>
+        throw new Exception("Request must specify either application or driver identifiers")
+    }
 
-    val (logText, startByte, endByte, logLength) = logProvider.getLog(logDir, logType, offset, byteLength)
+    val (logText, startByte, endByte, logLength) = logProvider.getLog(logDir, appId.get, podId.get, offset, byteLength)
     val pre = s"==== Bytes $startByte-$endByte of $logLength of $logDir$logType ====\n"
     pre + logText
   }
