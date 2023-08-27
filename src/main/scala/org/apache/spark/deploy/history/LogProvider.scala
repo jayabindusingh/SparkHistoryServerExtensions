@@ -152,7 +152,7 @@ private[history] object RollingFileReader  extends Logging{
       logDebug(fileName)
       //fileName.startsWith(activeFilePath.getName()) && fileName != activeFilePath.getName()
       fileName.startsWith(appName) && fileName.contains("-"+podId+"_")
-    }
+     }
  //   val activeFile = {
   //    if (fs.isFile(activeFilePath)) Some(fs.listStatus(activeFilePath)) else None
  //   }

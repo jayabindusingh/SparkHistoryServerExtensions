@@ -95,7 +95,10 @@ private[history] class LogPage(parent: HistoryServer, logProvider: LogProvider) 
           <div>{newButton}</div>
         </div>
       </div>
-
+	<div>
+		<script>{Unparsed(jsOnload)}</script>
+		<script src={UIUtils.prependBaseUri(request, "/custom/custom.js")}></script>
+	</div>
     UIUtils.basicSparkPage(request, content, logType + " log page for " + pageName)
   }
 
