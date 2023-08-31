@@ -38,7 +38,7 @@ import org.apache.spark.status.api.v1.{ApiRootResource, ApplicationInfo, UIRoot}
 import org.apache.spark.ui.{SparkUI, UIUtils, WebUI}
 import org.apache.spark.util.{ShutdownHookManager, SystemClock, Utils}
 import org.apache.spark.ui.JettyUtils._
-
+import scala.util.control.Breaks._
 
 
 /**
@@ -82,8 +82,22 @@ class HistoryServer(
  
  //jsingh 8/26/2023 - aded this setting to allow switching off tenant filtering which may be helpful for QA and internal environments
  // default value if not set will be treated as enabled
- val tenantFiltering=conf.get("spark.ui.tenantFiltering", "enabled")
- logInfo("***** Custom Class Loaded tenantFiltering = " + tenantFiltering)
+ val tenantFilteringEnabled=conf.get("spark.ui.tenantFilteringEnabled", "true")
+ logInfo("***** Custom Class Loaded spark.ui.tenantFilteringEnabled = " + tenantFilteringEnabled)
+ 
+ val tenantFilteringPatterns=conf.get("spark.ui.tenantFilteringPatterns", "")
+ logInfo("***** Custom Class Loaded spark.ui.tenantFilteringPatterns = " + tenantFilteringPatterns)
+ 
+ val filterPatterns = tenantFilteringPatterns.split(",")
+ logInfo("***** Custom Class Loaded filterPatterns count = " + filterPatterns.length)
+ 
+ 
+ val tenantFilteringExclusions=conf.get("spark.ui.tenantFilteringExclusions", "")
+ logInfo("***** Custom Class Loaded tenantFilteringExclusions = " + tenantFilteringExclusions)
+ 
+ val filterExceptions = tenantFilteringExclusions.split(",")
+ logInfo("***** Custom Class Loaded filterExceptions count = " + filterExceptions.length)
+ 
  
   private val loaderServlet = new HttpServlet {
     protected override def doGet(req: HttpServletRequest, res: HttpServletResponse): Unit = {
@@ -123,18 +137,38 @@ class HistoryServer(
       }
       
       //jsingh 8/26/2023 - added for tenant level app filtering
-      if (tenantFiltering=="enabled"){
+      if (tenantFilteringEnabled=="true"){
 	      try{
-		    if(!provider.getApplicationInfo(appId).get.name.startsWith(tenantId)){
-		      	logDebug("Failed authorization");
-		      	val msg = <div class="row">Application {appId} is forbidden.</div>
-		        res.setStatus(HttpServletResponse.SC_FORBIDDEN)
-		        UIUtils.basicSparkPage(req, msg, "Forbidden").foreach { n =>
-		          res.getWriter().write(n.toString)
-		        }
-		         return
-		    }
-	      }catch {
+		      val appName=provider.getApplicationInfo(appId).get.name
+		      // if exceptions are set, check if exceptions is a match
+		      if (filterExceptions.length>0){
+		      	if (!filterExceptions.contains(appName)){
+		      		// not in exception list, continue with filter pattern match
+		      		var filterMatch=false
+		      		for(i <- 0 until filterPatterns.length){
+		      			logDebug("Filter Pattern = "+filterPatterns(i)+tenantId)
+		      			if (appName.startsWith(filterPatterns(i)+tenantId)){
+		      				filterMatch=true
+		      				break
+		      			}
+		      		}
+		      		if(!filterMatch){
+		      			logDebug("Failed authorization");
+				      	val msg = <div class="row">Application {appId} is forbidden.</div>
+				        res.setStatus(HttpServletResponse.SC_FORBIDDEN)
+				        UIUtils.basicSparkPage(req, msg, "Forbidden").foreach { n =>
+				          res.getWriter().write(n.toString)
+				        }
+				        
+		         		return
+		      		}else{
+		      			// do noting, let the processing continue
+		      		}
+		      	}else{
+		      		// do noting, let the processing continue
+		      	}	
+		      }
+		  }catch {
 	      		case _: NoSuchElementException =>
 	            	logDebug("**** inside catch exception *****");
 	            	val msg = <div class="row">Application {appId} not found.</div>
@@ -281,7 +315,7 @@ class HistoryServer(
    */
   def getApplicationList(): Iterator[ApplicationInfo] = {
    
-    logDebug("***** Custom Class Loaded tenantFiltering = " + tenantFiltering)
+    logDebug("***** Custom Class Loaded tenantFilteringEnabled = " + tenantFilteringEnabled)
 	// jsingh 8/26/2023 return empty list and put a info message is tenant filtering is enabled to avoid any uncaught call to this method
 	
 	throw new Exception("Unauthorized Access, Review Tenant Level filtering")
@@ -298,17 +332,45 @@ class HistoryServer(
   def getFilteredApplicationList(tenantId: String): Iterator[ApplicationInfo] = {
    
     
-    if (tenantFiltering=="enabled"){
+    if (tenantFilteringEnabled=="true"){
 		  val filteredApplications = provider.getListing().filter { appInfo =>
 		  val appName = appInfo.name
 		  logDebug(appName)
-		  appName.startsWith(tenantId)
+		  //appName.startsWith(tenantId)
+		  matchFilter(appName,tenantId)
 		 }
       	filteredApplications
       } else {
       	provider.getListing()
       }
   	
+  }
+  
+  def matchFilter(appName : String, tenantId : String) : Boolean = {
+      // if exceptions are set, check if exceptions is a match
+      var filterMatch=false
+      if (filterExceptions.length>0){
+      	if (!filterExceptions.contains(appName)){
+      		// not in exception list, continue with filter pattern match
+      		
+      		for(i <- 0 until filterPatterns.length){
+      			logDebug("Filter Pattern = "+filterPatterns(i)+tenantId)
+      			if (appName.startsWith(filterPatterns(i)+tenantId)){
+      				filterMatch=true
+      				break
+      			}
+      		}
+      		if(!filterMatch){
+         		filterMatch=false
+      		}else{
+      			filterMatch=true
+      		}
+      	}else{
+      		filterMatch=true
+      	}	
+      }
+      
+      filterMatch
   }
 
   def getEventLogsUnderProcess(): Int = {
