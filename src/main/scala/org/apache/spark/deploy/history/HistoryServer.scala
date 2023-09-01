@@ -145,12 +145,14 @@ class HistoryServer(
 		      	if (!filterExceptions.contains(appName)){
 		      		// not in exception list, continue with filter pattern match
 		      		var filterMatch=false
-		      		for(i <- 0 until filterPatterns.length){
-		      			logDebug("Filter Pattern = "+filterPatterns(i)+tenantId)
-		      			if (appName.startsWith(filterPatterns(i)+tenantId)){
-		      				filterMatch=true
-		      				break
-		      			}
+		      		 breakable {
+		      		 	for(i <- 0 until filterPatterns.length){
+			      			logDebug("Filter Pattern = "+filterPatterns(i)+tenantId)
+			      			if (appName.startsWith(filterPatterns(i)+tenantId)){
+			      				filterMatch=true
+			      				break
+			      			}
+			      		}
 		      		}
 		      		if(!filterMatch){
 		      			logDebug("Failed authorization");
@@ -352,13 +354,14 @@ class HistoryServer(
       if (filterExceptions.length>0){
       	if (!filterExceptions.contains(appName)){
       		// not in exception list, continue with filter pattern match
-      		
-      		for(i <- 0 until filterPatterns.length){
-      			logDebug("Filter Pattern = "+filterPatterns(i)+tenantId)
+      	    breakable {
+      		 for(i <- 0 until filterPatterns.length){
+      			logInfo("App Name="+appName+" Filter Pattern = "+filterPatterns(i)+tenantId)
       			if (appName.startsWith(filterPatterns(i)+tenantId)){
       				filterMatch=true
-      				break
+     					break 				
       			}
+      		 }
       		}
       		if(!filterMatch){
          		filterMatch=false
